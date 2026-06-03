@@ -212,6 +212,15 @@ fun MainAppLayout() {
                             scope.launch { drawerState.close() }
                         }
                     )
+                    DrawerItemRow(
+                        label = "Tentang Aplikasi",
+                        icon = Icons.Default.Info,
+                        selected = currentScreen == AppScreen.ABOUT,
+                        onClick = {
+                            viewModel.navigateTo(AppScreen.ABOUT)
+                            scope.launch { drawerState.close() }
+                        }
+                    )
                 }
             }
         }
@@ -264,6 +273,7 @@ fun MainAppLayout() {
                         AppScreen.HUTANG -> DebtScreen(viewModel = viewModel)
                         AppScreen.PIUTANG -> ReceivableScreen(viewModel = viewModel)
                         AppScreen.LAPORAN_KEUANGAN -> AccountingReportsScreen(viewModel = viewModel)
+                        AppScreen.ABOUT -> AboutScreen()
                     }
                 }
             }
@@ -331,5 +341,6 @@ fun getScreenTitleInIndonesian(screen: AppScreen): String {
         AppScreen.HUTANG -> "Utang Supplier (Payables)"
         AppScreen.PIUTANG -> "Piutang Dagang (Receivables)"
         AppScreen.LAPORAN_KEUANGAN -> "Laporan Keuangan & Jurnal"
+        AppScreen.ABOUT -> "Tentang Pengembang"
     }
 }

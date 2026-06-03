@@ -424,7 +424,7 @@ class InventoryAccountingViewModel(application: Application) : AndroidViewModel(
     private fun seedInitialData() {
         viewModelScope.launch {
             // Check if Categories is empty, then seed all Master data
-            categories.take(1).collect { currentCats ->
+            repository.allCategories.take(1).collect { currentCats ->
                 if (currentCats.isEmpty()) {
                     // Seed Categories
                     repository.insertCategory(Category(name = "Makanan"))
@@ -497,7 +497,8 @@ enum class AppScreen {
     TRANSAKSI_RETUR,
     HUTANG,
     PIUTANG,
-    LAPORAN_KEUANGAN
+    LAPORAN_KEUANGAN,
+    ABOUT
 }
 
 data class AccountingReportState(
