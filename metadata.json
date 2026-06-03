@@ -1,0 +1,6 @@
+{
+  "name": "AsetKu",
+  "description": "Sistem pengelolaan Inventory terpadu dilengkapi pencatatan otomatis Laporan Keuangan (Laba Rugi, Neraca Seimbang, Arus Kas/Jurnal)",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
