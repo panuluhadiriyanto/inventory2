@@ -200,6 +200,15 @@ fun MainAppLayout() {
                             scope.launch { drawerState.close() }
                         }
                     )
+                    DrawerItemRow(
+                        label = "Multi-Lokasi Gudang",
+                        icon = Icons.Default.Storage,
+                        selected = currentScreen == AppScreen.GUDANG,
+                        onClick = {
+                            viewModel.navigateTo(AppScreen.GUDANG)
+                            scope.launch { drawerState.close() }
+                        }
+                    )
                     HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp), color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.05f))
 
                     DrawerCategoryLabel("Akuntansi & Pembukuan")
@@ -274,6 +283,7 @@ fun MainAppLayout() {
                         AppScreen.PIUTANG -> ReceivableScreen(viewModel = viewModel)
                         AppScreen.LAPORAN_KEUANGAN -> AccountingReportsScreen(viewModel = viewModel)
                         AppScreen.ABOUT -> AboutScreen()
+                        AppScreen.GUDANG -> WarehouseScreen(viewModel = viewModel)
                     }
                 }
             }
@@ -342,5 +352,6 @@ fun getScreenTitleInIndonesian(screen: AppScreen): String {
         AppScreen.PIUTANG -> "Piutang Dagang (Receivables)"
         AppScreen.LAPORAN_KEUANGAN -> "Laporan Keuangan & Jurnal"
         AppScreen.ABOUT -> "Tentang Pengembang"
+        AppScreen.GUDANG -> "Multi-Lokasi Gudang (Logistik)"
     }
 }

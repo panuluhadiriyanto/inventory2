@@ -144,3 +144,28 @@ data class JournalEntry(
     val credit: Double,
     val referenceId: String
 )
+
+@Entity(tableName = "warehouses")
+data class Warehouse(
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    val name: String,
+    val address: String = ""
+)
+
+@Entity(tableName = "warehouse_stocks", primaryKeys = ["warehouseId", "itemId"])
+data class WarehouseStock(
+    val warehouseId: Int,
+    val itemId: Int,
+    val stockQuantity: Int
+)
+
+@Entity(tableName = "stock_transfers")
+data class StockTransfer(
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    val itemId: Int,
+    val fromWarehouseId: Int,
+    val toWarehouseId: Int,
+    val quantity: Int,
+    val date: Long = System.currentTimeMillis(),
+    val notes: String = ""
+)

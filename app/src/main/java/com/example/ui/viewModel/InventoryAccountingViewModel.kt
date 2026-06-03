@@ -50,6 +50,16 @@ class InventoryAccountingViewModel(application: Application) : AndroidViewModel(
     val journalEntries: StateFlow<List<JournalEntry>> = repository.allJournalEntries
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    // --- WAREHOUSE FLOWS ---
+    val warehouses: StateFlow<List<Warehouse>> = repository.allWarehouses
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val warehouseStocks: StateFlow<List<WarehouseStock>> = repository.allWarehouseStocks
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val stockTransfers: StateFlow<List<StockTransfer>> = repository.allStockTransfers
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     // --- CARTS & RUNTIME UI STATE ---
     // Sales Cart
     private val _salesCart = MutableStateFlow<List<CartItem>>(emptyList())
@@ -91,6 +101,38 @@ class InventoryAccountingViewModel(application: Application) : AndroidViewModel(
                     sellingPrice = sellPrice,
                     stockQuantity = qty,
                     minStockAlert = minStock
+                )
+            )
+            // Add initial stock level to default warehouse (ID = 1)
+            val addedItem = repository.getItemByBarcode(sku)
+            if (addedItem != null) {
+                repository.insertWarehouseStock(WarehouseStock(warehouseId = 1, itemId = addedItem.id, stockQuantity = qty))
+            }
+        }
+    }
+
+    // --- ACTIONS: WAREHOUSES & TRANSFERS ---
+    fun addWarehouse(name: String, address: String) {
+        viewModelScope.launch {
+            repository.insertWarehouse(Warehouse(name = name, address = address))
+        }
+    }
+
+    fun deleteWarehouse(warehouse: Warehouse) {
+        viewModelScope.launch {
+            repository.deleteWarehouse(warehouse)
+        }
+    }
+
+    fun transferStock(itemId: Int, fromWarehouseId: Int, toWarehouseId: Int, quantity: Int, notes: String = "") {
+        viewModelScope.launch {
+            repository.executeStockTransfer(
+                StockTransfer(
+                    itemId = itemId,
+                    fromWarehouseId = fromWarehouseId,
+                    toWarehouseId = toWarehouseId,
+                    quantity = quantity,
+                    notes = notes
                 )
             )
         }
@@ -476,6 +518,21 @@ class InventoryAccountingViewModel(application: Application) : AndroidViewModel(
                     )
                 }
             }
+
+            // Also seed default warehouse and default initial stocks if empty
+            repository.allWarehouses.take(1).collect { currentWh ->
+                if (currentWh.isEmpty()) {
+                    repository.insertWarehouse(Warehouse(name = "Gudang Utama", address = "Gudang Pusat Distribusi"))
+                    repository.insertWarehouse(Warehouse(name = "Gudang Toko Cabang", address = "Samping Toko Retail Cabang"))
+                    
+                    // Add stock entries for all items in the database into Gudang Utama (ID = 1)
+                    repository.allItems.take(1).collect { allDbItems ->
+                        for (item in allDbItems) {
+                            repository.insertWarehouseStock(WarehouseStock(warehouseId = 1, itemId = item.id, stockQuantity = item.stockQuantity))
+                        }
+                    }
+                }
+            }
         }
     }
 }
@@ -498,7 +555,8 @@ enum class AppScreen {
     HUTANG,
     PIUTANG,
     LAPORAN_KEUANGAN,
-    ABOUT
+    ABOUT,
+    GUDANG
 }
 
 data class AccountingReportState(

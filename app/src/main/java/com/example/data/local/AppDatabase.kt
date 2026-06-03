@@ -20,9 +20,12 @@ import com.example.data.model.*
         ReturnDetail::class,
         Debt::class,
         Receivable::class,
-        JournalEntry::class
+        JournalEntry::class,
+        Warehouse::class,
+        WarehouseStock::class,
+        StockTransfer::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

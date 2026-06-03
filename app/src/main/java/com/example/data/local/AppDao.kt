@@ -138,4 +138,40 @@ interface AppDao {
 
     @Query("DELETE FROM journal_entries WHERE referenceId = :refId")
     suspend fun deleteJournalEntriesByRef(refId: String)
+
+    // Warehouses
+    @Query("SELECT * FROM warehouses ORDER BY name ASC")
+    fun getAllWarehouses(): Flow<List<Warehouse>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertWarehouse(warehouse: Warehouse): Long
+
+    @Delete
+    suspend fun deleteWarehouse(warehouse: Warehouse)
+
+    // Warehouse Stocks
+    @Query("SELECT * FROM warehouse_stocks")
+    fun getAllWarehouseStocks(): Flow<List<WarehouseStock>>
+
+    @Query("SELECT * FROM warehouse_stocks WHERE warehouseId = :warehouseId")
+    fun getStocksByWarehouseId(warehouseId: Int): Flow<List<WarehouseStock>>
+
+    @Query("SELECT * FROM warehouse_stocks WHERE itemId = :itemId")
+    suspend fun getStocksByItemId(itemId: Int): List<WarehouseStock>
+
+    @Query("SELECT * FROM warehouse_stocks WHERE warehouseId = :warehouseId AND itemId = :itemId LIMIT 1")
+    suspend fun getWarehouseStock(warehouseId: Int, itemId: Int): WarehouseStock?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertWarehouseStock(stock: WarehouseStock)
+
+    @Query("DELETE FROM warehouse_stocks WHERE warehouseId = :warehouseId AND itemId = :itemId")
+    suspend fun deleteWarehouseStock(warehouseId: Int, itemId: Int)
+
+    // Stock Transfers
+    @Query("SELECT * FROM stock_transfers ORDER BY date DESC")
+    fun getAllStockTransfers(): Flow<List<StockTransfer>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertStockTransfer(transfer: StockTransfer): Long
 }

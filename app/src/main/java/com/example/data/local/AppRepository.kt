@@ -42,6 +42,12 @@ class AppRepository(private val appDao: AppDao) {
                 // Decrement stock
                 val updatedStock = maxOf(0, dbItem.stockQuantity - detail.quantity)
                 appDao.updateItemStock(dbItem.id, updatedStock)
+                
+                // Track in default warehouse stock (id = 1)
+                val currentWStock = appDao.getWarehouseStock(1, dbItem.id)?.stockQuantity ?: dbItem.stockQuantity
+                val newWStock = maxOf(0, currentWStock - detail.quantity)
+                appDao.insertWarehouseStock(WarehouseStock(1, dbItem.id, newWStock))
+                
                 totalHpp += (dbItem.purchasePrice * detail.quantity)
             }
             appDao.insertSaleDetail(detail.copy(saleId = saleId))
@@ -149,6 +155,11 @@ class AppRepository(private val appDao: AppDao) {
                         purchasePrice = detail.unitPrice // Adapting price to current cost
                     )
                 )
+
+                // Track in default warehouse stock (id = 1)
+                val currentWStock = appDao.getWarehouseStock(1, dbItem.id)?.stockQuantity ?: 0
+                val newWStock = currentWStock + detail.quantity
+                appDao.insertWarehouseStock(WarehouseStock(1, dbItem.id, newWStock))
             }
             appDao.insertPurchaseDetail(detail.copy(purchaseId = purchaseId))
         }
@@ -396,4 +407,36 @@ class AppRepository(private val appDao: AppDao) {
     val allJournalEntries: Flow<List<JournalEntry>> = appDao.getAllJournalEntries()
 
     suspend fun insertJournalEntry(entry: JournalEntry) = appDao.insertJournalEntry(entry)
+
+    // Warehouses & Multi-location Management
+    val allWarehouses: Flow<List<Warehouse>> = appDao.getAllWarehouses()
+    val allWarehouseStocks: Flow<List<WarehouseStock>> = appDao.getAllWarehouseStocks()
+    val allStockTransfers: Flow<List<StockTransfer>> = appDao.getAllStockTransfers()
+
+    fun getStocksByWarehouseId(warehouseId: Int): Flow<List<WarehouseStock>> = appDao.getStocksByWarehouseId(warehouseId)
+
+    suspend fun insertWarehouse(warehouse: Warehouse): Long = appDao.insertWarehouse(warehouse)
+    suspend fun deleteWarehouse(warehouse: Warehouse) = appDao.deleteWarehouse(warehouse)
+
+    suspend fun insertWarehouseStock(stock: WarehouseStock) = appDao.insertWarehouseStock(stock)
+    suspend fun deleteWarehouseStock(warehouseId: Int, itemId: Int) = appDao.deleteWarehouseStock(warehouseId, itemId)
+    suspend fun getWarehouseStock(warehouseId: Int, itemId: Int): WarehouseStock? = appDao.getWarehouseStock(warehouseId, itemId)
+
+    suspend fun executeStockTransfer(transfer: StockTransfer) {
+        val fromStock = appDao.getWarehouseStock(transfer.fromWarehouseId, transfer.itemId)
+        val fromQty = fromStock?.stockQuantity ?: 0
+        
+        // Deduct from source warehouse
+        val newFromQty = maxOf(0, fromQty - transfer.quantity)
+        appDao.insertWarehouseStock(WarehouseStock(transfer.fromWarehouseId, transfer.itemId, newFromQty))
+
+        // Add to destination warehouse
+        val toStock = appDao.getWarehouseStock(transfer.toWarehouseId, transfer.itemId)
+        val toQty = toStock?.stockQuantity ?: 0
+        val newToQty = toQty + transfer.quantity
+        appDao.insertWarehouseStock(WarehouseStock(transfer.toWarehouseId, transfer.itemId, newToQty))
+
+        // Insert Transfer record
+        appDao.insertStockTransfer(transfer)
+    }
 }
