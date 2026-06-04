@@ -90,7 +90,7 @@ class InventoryAccountingViewModel(application: Application) : AndroidViewModel(
         }
     }
 
-    fun addItem(name: String, catId: Int, sku: String, buyPrice: Double, sellPrice: Double, qty: Int, minStock: Int) {
+    fun addItem(name: String, catId: Int, sku: String, buyPrice: Double, sellPrice: Double, qty: Int, minStock: Int, imageUri: String? = null) {
         viewModelScope.launch {
             repository.insertItem(
                 Item(
@@ -100,7 +100,8 @@ class InventoryAccountingViewModel(application: Application) : AndroidViewModel(
                     purchasePrice = buyPrice,
                     sellingPrice = sellPrice,
                     stockQuantity = qty,
-                    minStockAlert = minStock
+                    minStockAlert = minStock,
+                    imageUri = imageUri
                 )
             )
             // Add initial stock level to default warehouse (ID = 1)
@@ -489,10 +490,10 @@ class InventoryAccountingViewModel(application: Application) : AndroidViewModel(
                     repository.insertCustomer(Customer(name = "Rina Amelia", phone = "087755667788", address = "Kost Putri Melati, Bandung"))
 
                     // Create items
-                    repository.insertItem(Item(name = "Kopi Susu Espresso", categoryId = 1, skuBarcode = "899123456001", purchasePrice = 8000.0, sellingPrice = 13000.0, stockQuantity = 120, minStockAlert = 10))
-                    repository.insertItem(Item(name = "Teh Matcha GreenTea", categoryId = 2, skuBarcode = "899123456002", purchasePrice = 5000.0, sellingPrice = 9000.0, stockQuantity = 80, minStockAlert = 5))
-                    repository.insertItem(Item(name = "Powerbank Fast Charge 20W", categoryId = 3, skuBarcode = "899123456003", purchasePrice = 110000.0, sellingPrice = 175000.0, stockQuantity = 15, minStockAlert = 3))
-                    repository.insertItem(Item(name = "Kemeja Flanel SlimFit", categoryId = 4, skuBarcode = "899123456004", purchasePrice = 95000.0, sellingPrice = 160000.0, stockQuantity = 3, minStockAlert = 5)) // Will trigger warning in dashboard!
+                    repository.insertItem(Item(name = "Kopi Susu Espresso", categoryId = 1, skuBarcode = "899123456001", purchasePrice = 8000.0, sellingPrice = 13000.0, stockQuantity = 120, minStockAlert = 10, imageUri = "https://images.unsplash.com/photo-1541167760496-1628856ab772?w=400&q=80"))
+                    repository.insertItem(Item(name = "Teh Matcha GreenTea", categoryId = 2, skuBarcode = "899123456002", purchasePrice = 5000.0, sellingPrice = 9000.0, stockQuantity = 80, minStockAlert = 5, imageUri = "https://images.unsplash.com/photo-1536256263959-770b48d82b0a?w=400&q=80"))
+                    repository.insertItem(Item(name = "Powerbank Fast Charge 20W", categoryId = 3, skuBarcode = "899123456003", purchasePrice = 110000.0, sellingPrice = 175000.0, stockQuantity = 15, minStockAlert = 3, imageUri = "https://images.unsplash.com/photo-1622445262465-2481c8573226?w=400&q=80"))
+                    repository.insertItem(Item(name = "Kemeja Flanel SlimFit", categoryId = 4, skuBarcode = "899123456004", purchasePrice = 95000.0, sellingPrice = 160000.0, stockQuantity = 3, minStockAlert = 5, imageUri = "https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=400&q=80")) // Will trigger warning in dashboard!
 
                     // Seed Modal Awal to Kas
                     val date = System.currentTimeMillis()

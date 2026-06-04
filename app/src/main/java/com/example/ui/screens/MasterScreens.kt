@@ -23,6 +23,9 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
 import com.example.data.model.Category
 import com.example.data.model.Customer
 import com.example.data.model.Item
@@ -149,6 +152,7 @@ fun MasterItemScreen(
     var stockInput by remember { mutableStateOf("") }
     var alertInput by remember { mutableStateOf("") }
     var selectedCategoryId by remember { mutableStateOf<Int?>(null) }
+    var imageUriInput by remember { mutableStateOf("") }
 
     var categoryDropdownExpanded by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
@@ -181,6 +185,7 @@ fun MasterItemScreen(
                         stockInput = ""
                         alertInput = "5"
                         selectedCategoryId = categories.firstOrNull()?.id
+                        imageUriInput = ""
                         showFormDialog = true
                     },
                     shape = RoundedCornerShape(12.dp)
@@ -232,28 +237,61 @@ fun MasterItemScreen(
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.Top
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(item.name, fontWeight = FontWeight.Bold, fontSize = 16.sp, overflow = TextOverflow.Ellipsis, maxLines = 1)
-                                        Row(
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                            verticalAlignment = Alignment.CenterVertically
+                                    Row(
+                                        modifier = Modifier.weight(1f),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Card(
+                                            shape = RoundedCornerShape(8.dp),
+                                            modifier = Modifier.size(52.dp),
+                                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                                         ) {
-                                            SuggestionChip(
-                                                onClick = {},
-                                                label = { Text(categoryName) },
-                                                colors = SuggestionChipDefaults.suggestionChipColors(
-                                                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                                                    labelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                            Box(modifier = Modifier.fillMaxSize()) {
+                                                if (!item.imageUri.isNullOrEmpty()) {
+                                                    AsyncImage(
+                                                        model = item.imageUri,
+                                                        contentDescription = null,
+                                                        modifier = Modifier.fillMaxSize(),
+                                                        contentScale = ContentScale.Crop
+                                                    )
+                                                } else {
+                                                    Icon(
+                                                        imageVector = Icons.Default.Image,
+                                                        contentDescription = null,
+                                                        modifier = Modifier.align(Alignment.Center).size(24.dp),
+                                                        tint = MaterialTheme.colorScheme.outline
+                                                    )
+                                                }
+                                            }
+                                        }
+
+                                        Spacer(modifier = Modifier.width(10.dp))
+
+                                        Column {
+                                            Text(item.name, fontWeight = FontWeight.Bold, fontSize = 16.sp, overflow = TextOverflow.Ellipsis, maxLines = 1)
+                                            Row(
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                SuggestionChip(
+                                                    onClick = {},
+                                                    label = { Text(categoryName, fontSize = 11.sp) },
+                                                    colors = SuggestionChipDefaults.suggestionChipColors(
+                                                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                                                        labelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                                    ),
+                                                    modifier = Modifier.height(28.dp)
                                                 )
-                                            )
-                                            Text(
-                                                text = "SKU: ${item.skuBarcode}",
-                                                fontSize = 11.sp,
-                                                fontWeight = FontWeight.Medium,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                                            )
+                                                Text(
+                                                    text = "SKU: ${item.skuBarcode}",
+                                                    fontSize = 11.sp,
+                                                    fontWeight = FontWeight.Medium,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
                                         }
                                     }
 
@@ -268,6 +306,7 @@ fun MasterItemScreen(
                                                 stockInput = item.stockQuantity.toString()
                                                 alertInput = item.minStockAlert.toString()
                                                 selectedCategoryId = item.categoryId
+                                                imageUriInput = item.imageUri ?: ""
                                                 showFormDialog = true
                                             }
                                         ) {
@@ -331,6 +370,94 @@ fun MasterItemScreen(
                 text = {
                     Box(modifier = Modifier.heightIn(max = 420.dp)) {
                         LazyColumn(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            item {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
+                                        .padding(12.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally
+                                ) {
+                                    Text(
+                                        text = "Gambar Produk",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.align(Alignment.Start).padding(bottom = 8.dp)
+                                    )
+
+                                    Card(
+                                        shape = RoundedCornerShape(8.dp),
+                                        modifier = Modifier.size(80.dp),
+                                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                                    ) {
+                                        Box(modifier = Modifier.fillMaxSize()) {
+                                            if (imageUriInput.isNotBlank()) {
+                                                AsyncImage(
+                                                    model = imageUriInput,
+                                                    contentDescription = "Preview",
+                                                    modifier = Modifier.fillMaxSize(),
+                                                    contentScale = ContentScale.Crop
+                                                )
+                                            } else {
+                                                Icon(
+                                                    imageVector = Icons.Default.Image,
+                                                    contentDescription = null,
+                                                    modifier = Modifier.align(Alignment.Center).size(36.dp),
+                                                    tint = MaterialTheme.colorScheme.outline
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    Spacer(modifier = Modifier.height(10.dp))
+
+                                    OutlinedTextField(
+                                        value = imageUriInput,
+                                        onValueChange = { imageUriInput = it },
+                                        label = { Text("URL Gambar Produk") },
+                                        placeholder = { Text("https://example.com/item.jpg") },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        singleLine = true,
+                                        colors = OutlinedTextFieldDefaults.colors(
+                                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                                            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant
+                                        )
+                                    )
+
+                                    Spacer(modifier = Modifier.height(8.dp))
+
+                                    Text(
+                                        text = "Pilih Preset Cepat:",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.outline,
+                                        modifier = Modifier.align(Alignment.Start).padding(bottom = 4.dp)
+                                    )
+
+                                    val presetImages = listOf(
+                                        Pair("☕ Kopi", "https://images.unsplash.com/photo-1541167760496-1628856ab772?w=400&q=80"),
+                                        Pair("🍵 Matcha", "https://images.unsplash.com/photo-1536256263959-770b48d82b0a?w=400&q=80"),
+                                        Pair("⚡ Powerbank", "https://images.unsplash.com/photo-1622445262465-2481c8573226?w=400&q=80"),
+                                        Pair("👕 Kemeja", "https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=400&q=80"),
+                                        Pair("🍟 Cemilan", "https://images.unsplash.com/photo-1599490659273-e316c1fbc16d?w=400&q=80"),
+                                        Pair("📱 Gadget", "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=400&q=80")
+                                    )
+
+                                    androidx.compose.foundation.lazy.LazyRow(
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        items(presetImages.size) { index ->
+                                            val (lbl, url) = presetImages[index]
+                                            SuggestionChip(
+                                                onClick = { imageUriInput = url },
+                                                label = { Text(lbl, fontSize = 11.sp) }
+                                            )
+                                        }
+                                    }
+                                }
+                            }
                             item {
                                 OutlinedTextField(
                                     value = nameInput,
@@ -447,7 +574,7 @@ fun MasterItemScreen(
 
                                 val curr = editingItem
                                 if (curr == null) {
-                                    viewModel.addItem(nameInput, selectedCategoryId!!, barcodeInput, buy, sell, qty, alert)
+                                    viewModel.addItem(nameInput, selectedCategoryId!!, barcodeInput, buy, sell, qty, alert, if (imageUriInput.isBlank()) null else imageUriInput)
                                 } else {
                                     viewModel.updateItem(
                                         curr.copy(
@@ -457,7 +584,8 @@ fun MasterItemScreen(
                                             purchasePrice = buy,
                                             sellingPrice = sell,
                                             stockQuantity = qty,
-                                            minStockAlert = alert
+                                            minStockAlert = alert,
+                                            imageUri = if (imageUriInput.isBlank()) null else imageUriInput
                                         )
                                     )
                                 }

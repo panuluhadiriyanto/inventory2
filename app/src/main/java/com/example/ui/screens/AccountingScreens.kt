@@ -1,11 +1,14 @@
 package com.example.ui.screens
 
 import androidx.compose.animation.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -294,7 +297,7 @@ fun AccountingReportsScreen(
     val reportState by viewModel.accountingReport.collectAsState()
     val journalHistory by viewModel.journalEntries.collectAsState()
 
-    var activeTab by remember { mutableStateOf(0) } // 0: Laba Rugi, 1: Neraca Balanced, 2: Kas & Jurnal
+    var activeTab by remember { mutableStateOf(0) } // 0: Laba Rugi, 1: Neraca, 2: Kas & Jurnal (for narrow screens)
     var showExpenseDialog by remember { mutableStateOf(false) }
 
     var expenseDescInput by remember { mutableStateOf("") }
@@ -302,78 +305,219 @@ fun AccountingReportsScreen(
 
     val dateFormat = SimpleDateFormat("dd-MM-yyyy HH:mm", Locale.getDefault())
 
-    Column(modifier = modifier.fillMaxSize().padding(16.dp).testTag("accounting_reports_screen")) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column {
-                Text("Laporan Keuangan Otomatis", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
-                Text("Neraca keseimbangan, rincian aktivitas HPP & Laba", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            Button(
-                onClick = { showExpenseDialog = true },
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                shape = RoundedCornerShape(12.dp)
+    BoxWithConstraints(modifier = modifier.fillMaxSize().padding(16.dp).testTag("accounting_reports_screen")) {
+        val isWide = maxWidth >= 820.dp
+
+        Column(modifier = Modifier.fillMaxSize()) {
+            // Header
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(Icons.Default.AddBusiness, contentDescription = null)
-                Spacer(modifier = Modifier.width(6.dp))
-                Text("Bayar Beban")
+                Column {
+                    Text("Laporan Keuangan", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                    Text("Pencatatan akuntansi & neraca seimbang real-time", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                Button(
+                    onClick = { showExpenseDialog = true },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                    modifier = Modifier.height(34.dp),
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Icon(
+                        Icons.Default.AddBusiness,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Bayar Beban", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                }
             }
-        }
 
-        // Beautiful custom Tab Row layout
-        TabRow(
-            selectedTabIndex = activeTab,
-            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
-        ) {
-            Tab(selected = activeTab == 0, onClick = { activeTab = 0 }) {
-                Row(modifier = Modifier.padding(14.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.TrendingUp, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Text("Laba Rugi", fontWeight = FontWeight.Bold)
+            // Simple KPI summaries ribbon at the top
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(bottom = 14.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Kas Card
+                Card(
+                    modifier = Modifier.weight(1f),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                ) {
+                    Column(modifier = Modifier.padding(10.dp)) {
+                        Text("Kas & Bank 💳", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                        Text(formatRupiah(reportState.kasBalance), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                    }
                 }
-            }
-            Tab(selected = activeTab == 1, onClick = { activeTab = 1 }) {
-                Row(modifier = Modifier.padding(14.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Scale, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Text("Neraca", fontWeight = FontWeight.Bold)
-                }
-            }
-            Tab(selected = activeTab == 2, onClick = { activeTab = 2 }) {
-                Row(modifier = Modifier.padding(14.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Book, contentDescription = null, modifier = Modifier.size(16.dp))
-                    Text("Jurnal Ledger", fontWeight = FontWeight.Bold)
-                }
-            }
-        }
 
-        // Dinamis Content based on active selected index
-        Box(modifier = Modifier.weight(1f)) {
-            when (activeTab) {
-                0 -> IncomeStatementWidget(reportState)
-                1 -> BalanceSheetWidget(reportState)
-                2 -> JournalLedgerWidget(journalHistory, dateFormat)
+                // Laba Bersih Card
+                val isProfit = reportState.labaBersih >= 0
+                Card(
+                    modifier = Modifier.weight(1f),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (isProfit) Color(0xFFE8F5E9) else Color(0xFFFFEBEE)
+                    ),
+                    border = BorderStroke(1.dp, if (isProfit) Color(0xFFC8E6C9) else Color(0xFFFFCDD2))
+                ) {
+                    Column(modifier = Modifier.padding(10.dp)) {
+                        Text(if (isProfit) "Laba Bersih 📈" else "Rugi Bersih 📉", style = MaterialTheme.typography.bodySmall, color = if (isProfit) Color(0xFF2E7D32) else Color(0xFFC62828))
+                        Text(formatRupiah(reportState.labaBersih), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = if (isProfit) Color(0xFF2E7D32) else Color(0xFFC62828))
+                    }
+                }
+
+                // Total Aset (Aktiva)
+                Card(
+                    modifier = Modifier.weight(1f),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                ) {
+                    Column(modifier = Modifier.padding(10.dp)) {
+                        Text("Total Aset 🏛️", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                        Text(formatRupiah(reportState.totalAssets), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
+                    }
+                }
+            }
+
+            if (isWide) {
+                // RESPONSIVE SPLIT-PANE LAYOUT
+                Row(
+                    modifier = Modifier.fillMaxWidth().weight(1f),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // Left Column (Report Selector + Selected Report Statement) - weight 1.1
+                    Column(
+                        modifier = Modifier.weight(1.1f).fillMaxHeight()
+                    ) {
+                        // Narrower Tab Selector inside tablet view
+                        TabRow(
+                            selectedTabIndex = if (activeTab > 1) 0 else activeTab,
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
+                        ) {
+                            Tab(selected = activeTab == 0, onClick = { activeTab = 0 }) {
+                                Row(modifier = Modifier.padding(12.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Icon(Icons.Default.TrendingUp, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Text("Laba Rugi", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                            Tab(selected = activeTab == 1, onClick = { activeTab = 1 }) {
+                                Row(modifier = Modifier.padding(12.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Icon(Icons.Default.Scale, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Text("Neraca Keuangan", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+
+                        Box(modifier = Modifier.weight(1f)) {
+                            if (activeTab == 0) {
+                                IncomeStatementWidget(reportState, isWide = true)
+                            } else {
+                                BalanceSheetWidget(reportState, isWide = true)
+                            }
+                        }
+                    }
+
+                    // Right Column (Double-Entry Ledger Jurnal history, always visible) - weight 0.9
+                    Card(
+                        modifier = Modifier.weight(0.9f).fillMaxHeight(),
+                        elevation = CardDefaults.cardElevation(2.dp),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f)),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                    ) {
+                        Column(modifier = Modifier.padding(14.dp).fillMaxSize()) {
+                            Text(
+                                "Jurnal Ledger (Double-Entry Log)",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Black,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(bottom = 8.dp)
+                            )
+                            JournalLedgerWidget(journalHistory, dateFormat)
+                        }
+                    }
+                }
+            } else {
+                // STANDARD NARROW MOBILE TABS
+                TabRow(
+                    selectedTabIndex = activeTab,
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
+                ) {
+                    Tab(selected = activeTab == 0, onClick = { activeTab = 0 }) {
+                        Row(modifier = Modifier.padding(12.dp), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.TrendingUp, contentDescription = null, modifier = Modifier.size(14.dp))
+                            Text("Laba Rugi", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                    Tab(selected = activeTab == 1, onClick = { activeTab = 1 }) {
+                        Row(modifier = Modifier.padding(12.dp), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Scale, contentDescription = null, modifier = Modifier.size(14.dp))
+                            Text("Neraca", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                    Tab(selected = activeTab == 2, onClick = { activeTab = 2 }) {
+                        Row(modifier = Modifier.padding(12.dp), horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Book, contentDescription = null, modifier = Modifier.size(14.dp))
+                            Text("Jurnal Ledger", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+
+                Box(modifier = Modifier.weight(1f)) {
+                    when (activeTab) {
+                        0 -> IncomeStatementWidget(reportState, isWide = false)
+                        1 -> BalanceSheetWidget(reportState, isWide = false)
+                        2 -> JournalLedgerWidget(journalHistory, dateFormat)
+                    }
+                }
             }
         }
 
         if (showExpenseDialog) {
             AlertDialog(
                 onDismissRequest = { showExpenseDialog = false },
-                title = { Text("Input Beban Pengeluaran Baru") },
+                title = { Text("Posting Beban Biaya Baru", fontWeight = FontWeight.Bold) },
                 text = {
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text("Gunakan form ini untuk mencatat beban biaya di luar HPP seperti: Biaya Sewa, Biaya Wifi, Gaji, dll.", fontSize = 12.sp, color = Color.Gray)
+                        Text(
+                            "Mencatat beban operasional langsung memotong akumulasi modal & kas rill usaha.",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.outline
+                        )
+                        
+                        // Expense Preset Chips (Sederhana & Responsive)
+                        Text("Pilih Pintasan Kategori:", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.outline)
+                        val extraPresets = listOf(
+                            Pair("📶 Wifi", "Biaya Internet & Wifi Bulanan"),
+                            Pair("💡 Listrik", "Pembayaran Token Listrik Toko"),
+                            Pair("🏢 Sewa", "Angsuran Sewa Tempat Usaha"),
+                            Pair("👥 Gaji", "Penyaluran Gaji Karyawan Toko"),
+                            Pair("📦 Kirim", "Biaya Kurir & Ekspedisi Toko")
+                        )
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            items(extraPresets) { preset ->
+                                val (label, desc) = preset
+                                SuggestionChip(
+                                    onClick = { expenseDescInput = desc },
+                                    label = { Text(label, fontSize = 11.sp) }
+                                )
+                            }
+                        }
+
                         OutlinedTextField(
                             value = expenseDescInput,
                             onValueChange = { expenseDescInput = it },
-                            label = { Text("Deskripsi Beban (Contoh: Gaji Pegawai)") },
+                            label = { Text("Deskripsi Pengeluaran") },
+                            placeholder = { Text("Contoh: Pembelian Plastik Packing") },
                             modifier = Modifier.fillMaxWidth()
                         )
                         OutlinedTextField(
                             value = expenseAmountInput,
                             onValueChange = { expenseAmountInput = it },
-                            label = { Text("Jumlah Uang Pengeluaran (Rp)") },
+                            label = { Text("Jumlah Biaya (Rp)") },
+                            placeholder = { Text("0") },
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                             modifier = Modifier.fillMaxWidth()
                         )
@@ -389,13 +533,22 @@ fun AccountingReportsScreen(
                                 expenseDescInput = ""
                                 expenseAmountInput = ""
                             }
-                        }
+                        },
+                        modifier = Modifier.height(34.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        enabled = expenseDescInput.isNotBlank() && expenseAmountInput.isNotBlank()
                     ) {
-                        Text("Posting Beban")
+                        Text("Posting Jurnal", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
                 },
                 dismissButton = {
-                    TextButton(onClick = { showExpenseDialog = false }) { Text("Batal") }
+                    TextButton(
+                        onClick = { showExpenseDialog = false },
+                        modifier = Modifier.height(34.dp)
+                    ) {
+                        Text("Batal", fontSize = 11.sp)
+                    }
                 }
             )
         }
@@ -403,29 +556,28 @@ fun AccountingReportsScreen(
 }
 
 @Composable
-fun IncomeStatementWidget(state: AccountingReportState) {
+fun IncomeStatementWidget(state: AccountingReportState, isWide: Boolean = false) {
     Card(
         modifier = Modifier.fillMaxSize(),
-        elevation = CardDefaults.cardElevation(2.dp)
+        elevation = CardDefaults.cardElevation(2.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             item {
-                Text("Laporan Laba Rugi (Income Statement)", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                Text("Periode berjalan otomatis akrual", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(modifier = Modifier.height(10.dp))
+                Text("Laporan Laba Rugi", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Text("Periode penjualan dan penyesuaian biaya berjalan", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Divider(modifier = Modifier.padding(vertical = 4.dp))
             }
 
             item {
                 ReportValueLine("Pendapatan Kotor Penjualan", state.revenueTotal, isHeader = true)
-                Divider(modifier = Modifier.padding(vertical = 4.dp))
             }
 
             item {
                 ReportValueLine("Harga Pokok Penjualan (HPP)", state.hppTotal, isSubtracted = true)
-                Divider(modifier = Modifier.padding(vertical = 4.dp))
             }
 
             item {
@@ -434,31 +586,93 @@ fun IncomeStatementWidget(state: AccountingReportState) {
             }
 
             item {
-                ReportValueLine("Beban Operasional Tambahan", state.bebanTotal, isSubtracted = true)
+                ReportValueLine("Tambahan Beban Operasional", state.bebanTotal, isSubtracted = true)
                 Divider(modifier = Modifier.padding(vertical = 4.dp))
+            }
+
+            // Visual Segmented Margin Bar (Sederhana & Informatif!)
+            item {
+                if (state.revenueTotal > 0) {
+                    val hppPct = (state.hppTotal / state.revenueTotal).toFloat().coerceIn(0f, 1f)
+                    val bebanPct = (state.bebanTotal / state.revenueTotal).toFloat().coerceIn(0f, 1f)
+                    val profitPct = (state.labaBersih.coerceAtLeast(0.0) / state.revenueTotal).toFloat().coerceIn(0f, 1f)
+
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
+                            .padding(10.dp)
+                    ) {
+                        Text(
+                            "Alokasi Pendapatan Penjualan", 
+                            style = MaterialTheme.typography.bodySmall, 
+                            fontWeight = FontWeight.Bold, 
+                            color = MaterialTheme.colorScheme.outline
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(12.dp)
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                        ) {
+                            if (profitPct > 0) {
+                                Box(modifier = Modifier.fillMaxHeight().weight(profitPct.coerceAtLeast(0.01f)).background(Color(0xFF2E7D32)))
+                            }
+                            if (hppPct > 0) {
+                                Box(modifier = Modifier.fillMaxHeight().weight(hppPct.coerceAtLeast(0.01f)).background(Color(0xFFE57373)))
+                            }
+                            if (bebanPct > 0) {
+                                Box(modifier = Modifier.fillMaxHeight().weight(bebanPct.coerceAtLeast(0.01f)).background(Color(0xFFFFB74D)))
+                            }
+                        }
+                        
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Box(modifier = Modifier.size(6.dp).background(Color(0xFF2E7D32), CircleShape))
+                                Text("Laba Bersih (${(profitPct * 100).toInt()}%)", fontSize = 9.sp)
+                            }
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Box(modifier = Modifier.size(6.dp).background(Color(0xFFE57373), CircleShape))
+                                Text("HPP (${(hppPct * 100).toInt()}%)", fontSize = 9.sp)
+                            }
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Box(modifier = Modifier.size(6.dp).background(Color(0xFFFFB74D), CircleShape))
+                                Text("Beban (${(bebanPct * 100).toInt()}%)", fontSize = 9.sp)
+                            }
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(4.dp))
+                }
             }
 
             item {
                 val accentColor = if (state.labaBersih >= 0) Color(0xFF2E7D32) else Color(0xFFC62828)
                 Card(
-                    colors = CardDefaults.cardColors(containerColor = accentColor.copy(alpha = 0.1f)),
-                    shape = RoundedCornerShape(12.dp)
+                    colors = CardDefaults.cardColors(containerColor = accentColor.copy(alpha = 0.08f)),
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, accentColor.copy(alpha = 0.2f))
                 ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth().padding(16.dp),
+                        modifier = Modifier.fillMaxWidth().padding(14.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "LABA BERSIH (NET INCOME)",
+                            text = "LABA/RUGI BERSIH (NET INCOME)",
                             fontWeight = FontWeight.Black,
-                            fontSize = 15.sp,
+                            fontSize = 12.sp,
                             color = accentColor
                         )
                         Text(
                             text = formatRupiah(state.labaBersih),
                             fontWeight = FontWeight.ExtraBold,
-                            fontSize = 17.sp,
+                            fontSize = 15.sp,
                             color = accentColor
                         )
                     }
@@ -469,42 +683,77 @@ fun IncomeStatementWidget(state: AccountingReportState) {
 }
 
 @Composable
-fun BalanceSheetWidget(state: AccountingReportState) {
+fun BalanceSheetWidget(state: AccountingReportState, isWide: Boolean = false) {
     Card(
         modifier = Modifier.fillMaxSize(),
-        elevation = CardDefaults.cardElevation(2.dp)
+        elevation = CardDefaults.cardElevation(2.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
         LazyColumn(
             modifier = Modifier.fillMaxSize().padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             item {
                 Text("Neraca Keseimbangan (Balance Sheet)", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                Text("Aset Lancar harus tepat seimbang dengan Pasiva (Persamaan Akuntansi)", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                Spacer(modifier = Modifier.height(10.dp))
+                Text("Formula: Aktiva (Aset) = Pasiva (Utang + Modal + Laba)", fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Divider(modifier = Modifier.padding(vertical = 4.dp))
             }
 
-            // Aset Section
-            item {
-                Text("ASSET (AKTIVA)", fontWeight = FontWeight.Black, fontSize = 13.sp, color = MaterialTheme.colorScheme.primary)
-                Spacer(modifier = Modifier.height(6.dp))
-                ReportValueLine(" Kas & Bank", state.kasBalance)
-                ReportValueLine(" Persediaan Barang", state.persediaanBalance)
-                ReportValueLine(" Piutang Usaha", state.piutangBalance)
-                Divider()
-                ReportValueLine("TOTAL AKTIVA / ASSETS", state.totalAssets, isHeader = true, highlightColor = MaterialTheme.colorScheme.primary)
-                Spacer(modifier = Modifier.height(14.dp))
-            }
+            if (isWide) {
+                // Side-by-side Aktiva & Pasiva for Tablets (Classic double entry ledger look!)
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        // Section Aktiva (LEFT)
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("AKTIVA (ASSETS)", fontWeight = FontWeight.Black, fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
+                            Spacer(modifier = Modifier.height(6.dp))
+                            ReportValueLine("Kas & Tabungan Bank", state.kasBalance)
+                            ReportValueLine("Nilai Persediaan Gudang", state.persediaanBalance)
+                            ReportValueLine("Tagihan Piutang Sales", state.piutangBalance)
+                            Divider(modifier = Modifier.padding(vertical = 4.dp))
+                            ReportValueLine("TOTAL AKTIVA / ASSETS", state.totalAssets, isHeader = true, highlightColor = MaterialTheme.colorScheme.primary)
+                        }
 
-            // Liability & Equity Section
-            item {
-                Text("LIABILITAS & EKUITAS (PASIVA)", fontWeight = FontWeight.Black, fontSize = 13.sp, color = Color(0xFFC62828))
-                Spacer(modifier = Modifier.height(6.dp))
-                ReportValueLine(" Utang Usaha (Liabilitas)", state.utangBalance)
-                ReportValueLine(" Modal Awal Penyetoran", state.modalBalance)
-                ReportValueLine(" Laba Ditahan Ditransfer", state.labaBersih)
-                Divider()
-                ReportValueLine("TOTAL EKUITAS & PASIVA", state.totalPasiva, isHeader = true, highlightColor = Color(0xFFC62828))
+                        // Section Pasiva (RIGHT)
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("PASIVA (LIABILITIES & EQUITY)", fontWeight = FontWeight.Black, fontSize = 12.sp, color = Color(0xFFC62828))
+                            Spacer(modifier = Modifier.height(6.dp))
+                            ReportValueLine("Utang Dagang Usaha", state.utangBalance)
+                            ReportValueLine("Akumulasi Modal Awal", state.modalBalance)
+                            ReportValueLine("Laba Ditahan Saat Ini", state.labaBersih)
+                            Divider(modifier = Modifier.padding(vertical = 4.dp))
+                            ReportValueLine("TOTAL PASIVA / LIABILITAS", state.totalPasiva, isHeader = true, highlightColor = Color(0xFFC62828))
+                        }
+                    }
+                }
+            } else {
+                // Stacked format for Small Devices
+                item {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Text("AKTIVA (ASSET)", fontWeight = FontWeight.Black, fontSize = 12.sp, color = MaterialTheme.colorScheme.primary)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        ReportValueLine("Kas & Bank", state.kasBalance)
+                        ReportValueLine("Persediaan Barang", state.persediaanBalance)
+                        ReportValueLine("Piutang Usaha", state.piutangBalance)
+                        Divider(modifier = Modifier.padding(vertical = 4.dp))
+                        ReportValueLine("TOTAL AKTIVA / ASSETS", state.totalAssets, isHeader = true, highlightColor = MaterialTheme.colorScheme.primary)
+                    }
+                }
+
+                item {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Text("PASIVA (LIABILITAS & EQUITY)", fontWeight = FontWeight.Black, fontSize = 12.sp, color = Color(0xFFC62828))
+                        Spacer(modifier = Modifier.height(4.dp))
+                        ReportValueLine("Utang Toko Usaha", state.utangBalance)
+                        ReportValueLine("Modal Pemilik", state.modalBalance)
+                        ReportValueLine("Laba Ditahan Berjalan", state.labaBersih)
+                        Divider(modifier = Modifier.padding(vertical = 4.dp))
+                        ReportValueLine("TOTAL PASIVA", state.totalPasiva, isHeader = true, highlightColor = Color(0xFFC62828))
+                    }
+                }
             }
 
             // Balance Check Toast indicator inside lists!
@@ -528,9 +777,9 @@ fun BalanceSheetWidget(state: AccountingReportState) {
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = if (isBalanced) "Neraca Balanced & Sempurna!" else "Neraca Tidak Balanced!",
+                            text = if (isBalanced) "Neraca Seimbang & Valid!" else "Neraca Tidak Seimbang!",
                             fontWeight = FontWeight.Bold,
-                            fontSize = 12.sp,
+                            fontSize = 11.sp,
                             color = if (isBalanced) Color(0xFF2E7D32) else Color(0xFFC62828)
                         )
                     }
@@ -548,8 +797,8 @@ fun JournalLedgerWidget(
     if (journalHistory.isEmpty()) {
         EmptyStateView(
             icon = Icons.Default.Book,
-            message = "Jurnal kosong",
-            hint = "Semua histori pembukuan double-entry akan otomatis dicatat di sini secara sistematis."
+            message = "Jurnal Ledger Kosong",
+            hint = "Pencatatan double-entry otomatis belum membukukan transaksi harian apa pun."
         )
     } else {
         LazyColumn(
@@ -559,33 +808,34 @@ fun JournalLedgerWidget(
             items(journalHistory) { entry ->
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f))
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f)),
+                    shape = RoundedCornerShape(10.dp)
                 ) {
-                    Column(modifier = Modifier.padding(12.dp)) {
+                    Column(modifier = Modifier.padding(10.dp)) {
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                            Text(entry.description, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                            Text(dateFormat.format(Date(entry.date)), fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text(entry.description, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            Text(dateFormat.format(Date(entry.date)), fontSize = 10.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                         Spacer(modifier = Modifier.height(4.dp))
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                             Text(
                                 text = "Akun: ${entry.accountName}",
-                                fontSize = 12.sp,
+                                fontSize = 11.sp,
                                 fontWeight = FontWeight.Medium,
                                 color = MaterialTheme.colorScheme.primary
                             )
 
-                            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                 if (entry.debit > 0) {
                                     Column(horizontalAlignment = Alignment.End) {
-                                        Text("DEBIT", fontSize = 9.sp, color = Color(0xFF2E7D32))
-                                        Text(formatRupiah(entry.debit), fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color(0xFF2E7D32))
+                                        Text("DEBIT", fontSize = 8.sp, color = Color(0xFF2E7D32), fontWeight = FontWeight.Bold)
+                                        Text(formatRupiah(entry.debit), fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color(0xFF2E7D32))
                                     }
                                 }
                                 if (entry.credit > 0) {
                                     Column(horizontalAlignment = Alignment.End) {
-                                        Text("KREDIT", fontSize = 9.sp, color = Color(0xFFC62828))
-                                        Text(formatRupiah(entry.credit), fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color(0xFFC62828))
+                                        Text("KREDIT", fontSize = 8.sp, color = Color(0xFFC62828), fontWeight = FontWeight.Bold)
+                                        Text(formatRupiah(entry.credit), fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color(0xFFC62828))
                                     }
                                 }
                             }
@@ -605,12 +855,12 @@ fun ReportValueLine(
     isSubtracted: Boolean = false,
     highlightColor: Color? = null
 ) {
-    val sizeText = if (isHeader) 14.sp else 13.sp
+    val sizeText = if (isHeader) 13.sp else 12.sp
     val font = if (isHeader) FontWeight.Bold else FontWeight.Normal
     val labelText = if (isSubtracted) "(-) $label" else label
 
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(labelText, fontWeight = font, fontSize = sizeText, color = if (isSubtracted) Color.Gray else MaterialTheme.colorScheme.onSurface)

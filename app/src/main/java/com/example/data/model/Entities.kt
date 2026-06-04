@@ -18,7 +18,8 @@ data class Item(
     val purchasePrice: Double,
     val sellingPrice: Double,
     val stockQuantity: Int,
-    val minStockAlert: Int = 5
+    val minStockAlert: Int = 5,
+    val imageUri: String? = null
 )
 
 @Entity(tableName = "suppliers")
